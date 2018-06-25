@@ -1,0 +1,33 @@
+{
+  "name": "bot",
+  "version": "0.1.0",
+  "description": "Teste de bots para Skype",
+  "main": "app.js",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "botbuilder": "^3.15.0",
+    "dotenv-extended": "^2.0.2",
+    "restify": "^7.2.1",
+    "swagger-client": "^3.8.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/augustopimenta/skype-bot.git"
+  },
+  "keywords": [
+    "skype",
+    "bot",
+    "skype",
+    "bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/augustopimenta/skype-bot/issues"
+  },
+  "homepage": "https://github.com/augustopimenta/skype-bot#readme"
+}
