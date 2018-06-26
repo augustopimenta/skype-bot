@@ -27,7 +27,8 @@ var bot = new builder.UniversalBot(connector, function(session) {
     var text = session.message.text;
     var message = session.message;
 
-    console.log(message);
+    console.log(session.message);
+    console.log('message', message);
 
     if (text.indexOf('?') <= 0) {
         session.send('Eu só respondo perguntas...');
@@ -45,7 +46,9 @@ var bot = new builder.UniversalBot(connector, function(session) {
     var mentions = message.entities
         .filter(m => m.type === 'mention' && (m.mentioned.id !== botId));
 
-    console.log(mentions);
+    console.log('message', message);
+
+    console.log('mentions', mentions);
 
     if (mentions.length < 2) {
         session.send('Acho que você já sabe a resposta não é?');
