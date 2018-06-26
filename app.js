@@ -24,18 +24,15 @@ var connector = new builder.ChatConnector({
 server.post('/api/messages', connector.listen());
 
 var bot = new builder.UniversalBot(connector, function(session) {
-    var message = session.message.text;
+    var text = session.message.text;
+    var message = session.message;
 
-    console.log('message', session.message);
-
-    console.log('address', message.address);
-
-    if (message.indexOf('?') <= 0) {
+    if (text.indexOf('?') <= 0) {
         session.send('Eu só respondo perguntas...');
         return;
     }
 
-    var parts = message.split('?').filter(p => !!p);
+    var parts = text.split('?').filter(p => !!p);
     if (parts.length < 2) {
         session.send('Ta... mais e as opções?');
         return;
