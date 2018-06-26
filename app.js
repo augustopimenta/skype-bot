@@ -58,7 +58,7 @@ var bot = new builder.UniversalBot(connector, function(session) {
     setTimeout(function() {
         var mention = mentions[Math.floor(Math.random() * mentions.length)];
 
-        session.send('A com certeza é o(a) <at>@' + mention.name + '</at>!');
+        session.send('A com certeza é o(a) <at>@' + mention.text + '</at>!');
     }, 4000);   
 });
 
