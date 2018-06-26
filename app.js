@@ -26,7 +26,9 @@ server.post('/api/messages', connector.listen());
 var bot = new builder.UniversalBot(connector, function(session) {
     var message = session.message.text;
 
-    console.log(session.message);
+    console.log('message', session.message);
+
+    console.log('address', message.address);
 
     if (message.indexOf('?') <= 0) {
         session.send('Eu só respondo perguntas...');
