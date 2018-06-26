@@ -40,14 +40,8 @@ var bot = new builder.UniversalBot(connector, function(session) {
 
     var botId = message.address.bot.id;
 
-    //&& (m.mentioned.id === botId)
-
-    console.log(botId);
-
     var mentions = message.entities
-        .filter(m => m.type === 'mention');
-
-    console.log(mentions[0]);
+        .filter(m => m.type === 'mention' && (m.mentioned.id === botId));
 
     if (mentions.length < 2) {
         session.send('Acho que você já sabe a resposta não é?');
@@ -57,8 +51,7 @@ var bot = new builder.UniversalBot(connector, function(session) {
     session.sendTyping();
     setTimeout(function() {
         var mention = mentions[Math.floor(Math.random() * mentions.length)];
-
-        session.send('A com certeza é o(a) ' + mention.text + '');
+        session.send('O(a) ' + mention.text + ' com certeza!');
     }, 4000);   
 });
 
