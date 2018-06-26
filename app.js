@@ -35,13 +35,31 @@ var bot = new builder.UniversalBot(connector, function(session) {
 
     var parts = message.split('?').filter(p => !!p);
     if (parts.length < 2) {
-        session.send('Ta.... mais e as opções?');
+        session.send('Ta... mais e as opções?');
+        return;
+    }
+
+    var botId = message.address.bot.id;
+
+    //&& (m.mentioned.id === botId)
+
+    console.log(botId);
+
+    var mentions = message.entities
+        .filter(m => m.type === 'mention');
+
+    console.log(mentions[0]);
+
+    if (mentions.length < 2) {
+        session.send('Acho que você já sabe a resposta não é?');
         return;
     }
 
     session.sendTyping();
     setTimeout(function() {
-        session.send('A com certeza é o ...');
-    }, 2000);   
+        var mention = mentions[Math.floor(Math.random() * mentions.length)];
+
+        session.send('A com certeza é o(a) <at>@' + mention.name + '</at>!');
+    }, 4000);   
 });
 
