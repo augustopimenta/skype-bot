@@ -41,7 +41,7 @@ var bot = new builder.UniversalBot(connector, function(session) {
     var botId = message.address.bot.id;
 
     var mentions = message.entities
-        .filter(m => m.type === 'mention' && (m.mentioned.id === botId));
+        .filter(m => m.type === 'mention' && (m.mentioned.id !== botId));
 
     if (mentions.length < 2) {
         session.send('Acho que você já sabe a resposta não é?');
