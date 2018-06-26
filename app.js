@@ -23,12 +23,27 @@ var connector = new builder.ChatConnector({
 
 server.post('/api/messages', connector.listen());
 
+var inMemoryStorage = new builder.MemoryBotStorage();
+
 var bot = new builder.UniversalBot(connector, function(session) {
     var text = session.message.text;
     var message = session.message;
 
-    console.log(session.message);
-    console.log('message', message);
+    var conversationId = message.address.conversation.id;
+
+    addTokenToClient(connector, connectorApiClient).then(function (client) {
+        var serviceUrl = url.parse(message.address.serviceUrl);
+        var serviceScheme = serviceUrl.protocol.split(':')[0];
+        client.setSchemes([serviceScheme]);
+        client.setHost(serviceUrl.host);
+
+        return client.Conversations.Conversations_GetConversationMembers({ conversationId: conversationId })
+            .then(function (res) {
+                printMembersInChannel(message.address, res.obj);
+            });
+    }).catch(function (error) {
+        console.log('Error retrieving conversation members', error);
+    });
 
     if (text.indexOf('?') <= 0) {
         session.send('Eu só respondo perguntas...');
@@ -44,15 +59,21 @@ var bot = new builder.UniversalBot(connector, function(session) {
     var botId = message.address.bot.id;
 
     var mentions = message.entities
-        .filter(m => m.type === 'mention' && (m.mentioned.id !== botId));
+        .filter(m => (m.type === 'mention') && (m.mentioned.id !== botId) && (m.mentioned.id !== '*'));
 
-    console.log('message', message);
+    var hasAllMention = message.entities.find(m => m.id === '*');
 
-    console.log('mentions', mentions);
+    if (hasAllMention) {
+        mentions = [];
+    }
 
-    if (mentions.length < 2) {
+    if (mentions.length == 1) {
         session.send('Acho que você já sabe a resposta não é?');
         return;
+    }
+
+    if (mentions.length == 0) {
+
     }
 
     session.sendTyping();
@@ -60,5 +81,28 @@ var bot = new builder.UniversalBot(connector, function(session) {
         var mention = mentions[Math.floor(Math.random() * mentions.length)];
         session.send('O(a) ' + mention.text + ' com certeza!');
     }, 4000);   
-});
+}).set('storage', inMemoryStorage);
 
+function addTokenToClient(connector, clientPromise) {
+    // ask the connector for the token. If it expired, a new token will be requested to the API
+    var obtainToken = Promise.promisify(connector.getAccessToken.bind(connector));
+    return Promise.all([obtainToken(), clientPromise]).then(function (values) {
+        var token = values[0];
+        var client = values[1];
+        client.clientAuthorizations.add('AuthorizationBearer', new Swagger.ApiKeyAuthorization('Authorization', 'Bearer ' + token, 'header'));
+        return client;
+    });
+}
+
+// Create a message with the member list and send it to the conversationAddress
+function printMembersInChannel(conversationAddress, members) {
+    if (!members || members.length === 0) return;
+
+    var memberList = members.map(function (m) { return '* ' + m.name + ' (Id: ' + m.id + ')'; })
+        .join('\n ');
+
+    var reply = new builder.Message()
+        .address(conversationAddress)
+        .text('These are the members of this conversation: \n ' + memberList);
+    bot.send(reply);
+}
