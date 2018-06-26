@@ -89,6 +89,7 @@ function addTokenToClient(connector, clientPromise) {
     return Promise.all([obtainToken(), clientPromise]).then(function (values) {
         var token = values[0];
         var client = values[1];
+        console.log('values', values);
         client.clientAuthorizations.add('AuthorizationBearer', new Swagger.ApiKeyAuthorization('Authorization', 'Bearer ' + token, 'header'));
         return client;
     });
