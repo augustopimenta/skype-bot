@@ -5,16 +5,79 @@ var restify = require('restify');
 var Swagger = require('swagger-client');
 var Promise = require('bluebird');
 var url = require('url');
-
-var connectorApiClient = new Swagger({
-    url: 'https://raw.githubusercontent.com/Microsoft/BotBuilder/master/CSharp/Library/Microsoft.Bot.Connector.Shared/Swagger/ConnectorAPI.json',
-    usePromise: true
-});
+let https = require('https');
 
 var server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function() {
 	console.log('%s listening to %s', server.name, server.url);
 });
+
+let subscriptionKey = process.env.SEARCH_API_TOKEN;
+
+let host = 'api.cognitive.microsoft.com';
+let path = '/bing/v7.0/images/search';
+
+let times = 1;
+let imageType = 'png,jpeg';
+
+let bing_image_search = function (text, session) {
+
+    let search = text;
+    if (/\!gif/.test(text)) {
+        search = text.replace(/\!gif/, '').trim();
+        imageType = 'gif';
+    }
+    if (/[x|X]\d{0,}$/.test(text)) {
+        const parts = search.toLowerCase().split('x');
+        search = parts[0].trim();
+        times = Math.max(Math.min(10, parts[1]), 1);     
+    } else {
+        search = text.trim();
+    }
+
+    let request_params = {
+        method: 'GET',
+        hostname: host,
+        path: path + '?safeSearch=Off&count=50&q=' + encodeURIComponent(search + ' imagetype:' + imageType),
+        headers: {
+            'Ocp-Apim-Subscription-Key': subscriptionKey,
+        }
+    };
+
+    console.log(path + '?safeSearch=Off&count=50&q=' + encodeURIComponent(search + ` imagetype:${imageType}`));
+
+    let req = https.request(request_params, response => {
+        let body = '';
+        response.on('data', function (d) {
+            body += d;
+        });
+        response.on('end', function () {
+            body = JSON.parse(body);
+
+            if (body.value.length > 0) {
+                for (let i = 0; i < times; i++) {
+                    const randomIndex = Math.floor(Math.random() * body.value.length);
+
+                    session.send({
+                        attachments: [
+                            {
+                                contentType: 'image/' + body.value[randomIndex].encodingFormat,
+                                contentUrl: body.value[randomIndex].contentUrl,
+                                name: body.value[randomIndex].name
+                            }
+                        ]
+                    });
+                }
+            } else {
+                session.send('Não encontrei nada!');
+            }
+        });
+        response.on('error', function (e) {
+            console.log('Error: ' + e.message);
+        });
+    });
+    req.end();
+}
 
 var connector = new builder.ChatConnector({
 	appId: process.env.MICROSOFT_APP_ID,
@@ -27,83 +90,7 @@ var inMemoryStorage = new builder.MemoryBotStorage();
 
 var bot = new builder.UniversalBot(connector, function(session) {
     var text = session.message.text;
-    var message = session.message;
-
-    var conversationId = message.address.conversation.id;
-
-    addTokenToClient(connector, connectorApiClient).then(function (client) {
-        var serviceUrl = url.parse(message.address.serviceUrl);
-        var serviceScheme = serviceUrl.protocol.split(':')[0];
-        client.setSchemes([serviceScheme]);
-        client.setHost(serviceUrl.host);
-
-        return client.Conversations.Conversations_GetConversationMembers({ conversationId: conversationId })
-            .then(function (res) {
-                printMembersInChannel(message.address, res.obj);
-            });
-    }).catch(function (error) {
-        console.log('Error retrieving conversation members', error);
-    });
-
-    if (text.indexOf('?') <= 0) {
-        session.send('Eu só respondo perguntas...');
-        return;
-    }
-
-    var parts = text.split('?').filter(p => !!p);
-    if (parts.length < 2) {
-        session.send('Ta... mais e as opções?');
-        return;
-    }
-
-    var botId = message.address.bot.id;
-
-    var mentions = message.entities
-        .filter(m => (m.type === 'mention') && (m.mentioned.id !== botId) && (m.mentioned.id !== '*'));
-
-    var hasAllMention = message.entities.find(m => m.id === '*');
-
-    if (hasAllMention) {
-        mentions = [];
-    }
-
-    if (mentions.length == 1) {
-        session.send('Acho que você já sabe a resposta não é?');
-        return;
-    }
-
-    if (mentions.length == 0) {
-
-    }
 
     session.sendTyping();
-    setTimeout(function() {
-        var mention = mentions[Math.floor(Math.random() * mentions.length)];
-        session.send('O(a) ' + mention.text + ' com certeza!');
-    }, 4000);   
+    bing_image_search(text, session);
 }).set('storage', inMemoryStorage);
-
-function addTokenToClient(connector, clientPromise) {
-    // ask the connector for the token. If it expired, a new token will be requested to the API
-    var obtainToken = Promise.promisify(connector.getAccessToken.bind(connector));
-    return Promise.all([obtainToken(), clientPromise]).then(function (values) {
-        var token = values[0];
-        var client = values[1];
-        console.log('values', values);
-        client.clientAuthorizations.add('AuthorizationBearer', new Swagger.ApiKeyAuthorization('Authorization', 'Bearer ' + token, 'header'));
-        return client;
-    });
-}
-
-// Create a message with the member list and send it to the conversationAddress
-function printMembersInChannel(conversationAddress, members) {
-    if (!members || members.length === 0) return;
-
-    var memberList = members.map(function (m) { return '* ' + m.name + ' (Id: ' + m.id + ')'; })
-        .join('\n ');
-
-    var reply = new builder.Message()
-        .address(conversationAddress)
-        .text('These are the members of this conversation: \n ' + memberList);
-    bot.send(reply);
-}
